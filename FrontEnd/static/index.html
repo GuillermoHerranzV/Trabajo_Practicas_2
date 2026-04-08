@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <title>Docker Manager</title>
+        <link rel="stylesheet" href="./styles.css">
+    </head>
+
+    <body>
+        <h1>Docker Container Manager</h1>
+        <div id="containers">
+            <!-- Containers will be loaded here -->
+        </div>
+        <div id="error" style="color: red; margin-bottom: 1rem;"></div>
+        <div id="form">
+            <h2>Create Container</h2>
+            <input type="text" id="name" placeholder="Container Name">
+            <input type="text" id="image" placeholder="Image (e.g., nginx)">
+            <button onclick="createContainer()">Create</button>
+        </div>
+        <script>
+            const GRAPHQL_URL = 'http://localhost:8000/graphql';
+
+            function showError(message) {
+                document.getElementById('error').textContent = message;
+            }
+
+            function clearError() {
+                document.getElementById('error').textContent = '';
+            }
+
+            async function fetchGraphQL(query, variables = {}) {
+                const response = await fetch(GRAPHQL_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query, variables }),
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.errors?.map(e => e.message).join(', ') || response.statusText);
+                }
+                if (result.errors) {
+                    throw new Error(result.errors.map(e => e.message).join(', '));
+                }
+                return result;
+            }
+
+            async function loadContainers() {
+                clearError();
+                const query = `
+                    query {
+                        getContainers {
+                            id
+                            name
+                            image
+                            status
+                            ports
+                        }
+                    }
+                `;
+                const containersDiv = document.getElementById('containers');
+                try {
+                    const result = await fetchGraphQL(query);
+                    if (!result.data || !result.data.getContainers) {
+                        throw new Error('Invalid server response');
+                    }
+                    containersDiv.innerHTML = '<h2>Containers</h2>';
+                    result.data.getContainers.forEach(container => {
+                        const div = document.createElement('div');
+                        div.innerHTML = `
+                            <p>${container.name} (${container.image}) - ${container.status}</p>
+                            <button onclick="startContainer('${container.id}')">Start</button>
+                            <button onclick="stopContainer('${container.id}')">Stop</button>
+                            <button onclick="deleteContainer('${container.id}')">Delete</button>
+                        `;
+                        containersDiv.appendChild(div);
+                    });
+                } catch (err) {
+                    containersDiv.innerHTML = '<h2>Containers</h2>';
+                    showError(err.message || 'Error loading containers');
+                }
+            }
+
+            async function createContainer() {
+                clearError();
+                const name = document.getElementById('name').value;
+                const image = document.getElementById('image').value;
+                const mutation = `
+                    mutation CreateContainer($name: String!, $image: String!) {
+                        createContainer(name: $name, image: $image) {
+                            id
+                            name
+                            image
+                            status
+                        }
+                    }
+                `;
+                try {
+                    await fetchGraphQL(mutation, { name, image });
+                    loadContainers();
+                } catch (err) {
+                    showError(err.message || 'Error creating container');
+                }
+            }
+
+            async function startContainer(id) {
+                const mutation = `
+                    mutation StartContainer($id: ID!) {
+                        startContainer(id: $id)
+                    }
+                `;
+                await fetchGraphQL(mutation, { id });
+                loadContainers();
+            }
+
+            async function stopContainer(id) {
+                const mutation = `
+                    mutation StopContainer($id: ID!) {
+                        stopContainer(id: $id)
+                    }
+                `;
+                await fetchGraphQL(mutation, { id });
+                loadContainers();
+            }
+
+            async function deleteContainer(id) {
+                const mutation = `
+                    mutation DeleteContainer($id: ID!) {
+                        deleteContainer(id: $id)
+                    }
+                `;
+                await fetchGraphQL(mutation, { id });
+                loadContainers();
+            }
+
+            loadContainers();
+        </script>
+    </body>
+
+</html>

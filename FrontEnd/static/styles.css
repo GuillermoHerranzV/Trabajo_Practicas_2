@@ -1,0 +1,12 @@
+.button {
+    display: flex;
+    align-items: right;
+    padding: 0.25rem 0.5rem;
+    border: 2px solid #6b7280;
+    border-radius: 0.25rem;
+    background-color: #fff;
+    transition: background-color 150ms ease;
+}
+.button:hover:not(:disabled) {
+    background-color: #e5e7eb;
+}

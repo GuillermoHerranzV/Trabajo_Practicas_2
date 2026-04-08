@@ -1,0 +1,24 @@
+services:
+  backend:
+    image: my-backend
+    pull_policy: never
+    container_name: my-backend
+    build:
+      context: ./BackEnd
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  
+  frontend:
+    image: my-frontend
+    pull_policy: never
+    container_name: my-frontend
+    build:
+      context: ./FrontEnd
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"

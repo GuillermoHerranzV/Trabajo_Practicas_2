@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "dev": "deno run -A --allow-net --allow-env --allow-run --env --watch main.ts"
+  },
+  "imports": {
+    "@apollo/server": "npm:@apollo/server@^4.12.2",
+    "@std/assert": "jsr:@std/assert@1"
+  }
+}
