@@ -10,6 +10,8 @@ type Container {
 type Query {
     getContainers: [Container!]!
     getContainer(id: ID!): Container
+    getContainerLogs(id: ID!): String!
+    getContainerWorkingDir(id: ID!): String!
 }
 
 type Mutation {
@@ -17,5 +19,11 @@ type Mutation {
     deleteContainer(id: ID!): Boolean!
     startContainer(id: ID!): Boolean!
     stopContainer(id: ID!): Boolean!
+    executeCommand(id: ID!, command: String!): CommandResult!
+}
+
+type CommandResult {
+    output: String!
+    workingDir: String!
 }
 `;

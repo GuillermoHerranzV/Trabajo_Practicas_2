@@ -12,6 +12,24 @@
             <!-- Containers will be loaded here -->
         </div>
         <div id="error" style="color: red; margin-bottom: 1rem;"></div>
+        <div id="logsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; overflow: auto;">
+            <div style="background: #1e1e1e; margin: 2rem; padding: 2rem; border-radius: 8px; max-width: 800px;">
+                <h2 id="logsTitle" style="color: white; margin-top: 0;">Container Logs</h2>
+                <pre id="logsContent" style="background: #000; color: #0f0; padding: 1rem; border-radius: 4px; max-height: 400px; overflow: auto; font-size: 12px;"></pre>
+                <button onclick="closeLogsModal()" style="padding: 0.5rem 1rem; margin-top: 1rem;">Close</button>
+            </div>
+        </div>
+        <div id="consoleModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; overflow: auto;">
+            <div style="background: #1e1e1e; margin: 2rem; padding: 2rem; border-radius: 8px; max-width: 800px;">
+                <h2 id="consoleTitle" style="color: white; margin-top: 0;">Container Console</h2>
+                <pre id="consoleContent" style="background: #000; color: #0f0; padding: 1rem; border-radius: 4px; max-height: 350px; overflow: auto; font-size: 12px;"></pre>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <input type="text" id="commandInput" placeholder="Enter command (e.g., ls -la)" style="flex: 1; padding: 0.5rem; border-radius: 4px; border: 1px solid #0f0; background: #000; color: #0f0; font-family: monospace;">
+                    <button onclick="executeCommandInContainer()" style="padding: 0.5rem 1rem; background: #0f0; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Execute</button>
+                </div>
+                <button onclick="closeConsoleModal()" style="padding: 0.5rem 1rem; margin-top: 1rem;">Close</button>
+            </div>
+        </div>
         <div id="form">
             <h2>Create Container</h2>
             <input type="text" id="name" placeholder="Container Name">
@@ -27,6 +45,94 @@
 
             function clearError() {
                 document.getElementById('error').textContent = '';
+            }
+
+            function openLogs(id, name) {
+                const query = `
+                    query {
+                        getContainerLogs(id: "${id}")
+                    }
+                `;
+                fetchGraphQL(query).then(result => {
+                    document.getElementById('logsTitle').textContent = `Logs - ${name}`;
+                    document.getElementById('logsContent').textContent = result.data.getContainerLogs || 'No logs';
+                    document.getElementById('logsModal').style.display = 'block';
+                }).catch(err => {
+                    showError(err.message || 'Error loading logs');
+                });
+            }
+
+            function closeLogsModal() {
+                document.getElementById('logsModal').style.display = 'none';
+            }
+
+            function openConsole(id, name) {
+                window.currentContainerId = id;
+                const query = `
+                    query {
+                        getContainerLogs(id: "${id}")
+                        getContainerWorkingDir(id: "${id}")
+                    }
+                `;
+                fetchGraphQL(query).then(result => {
+                    const workingDir = result.data.getContainerWorkingDir;
+                    document.getElementById('consoleTitle').textContent = `${workingDir} - ${name}`;
+                    document.getElementById('consoleContent').textContent = result.data.getContainerLogs || 'No logs';
+                    document.getElementById('consoleModal').style.display = 'block';
+                    document.getElementById('commandInput').focus();
+                }).catch(err => {
+                    showError(err.message || 'Error loading console');
+                });
+            }
+
+            function updateWorkingDirDisplay(workingDir) {
+                const title = document.getElementById('consoleTitle');
+                const parts = title.textContent.split(' - ');
+                if (parts.length >= 2) {
+                    title.textContent = `${workingDir} - ${parts[1]}`;
+                }
+            }
+
+            function closeConsoleModal() {
+                document.getElementById('consoleModal').style.display = 'none';
+                window.currentContainerId = null;
+            }
+
+            function executeCommandInContainer() {
+                const command = document.getElementById('commandInput').value;
+                if (!command.trim()) return;
+                
+                const mutation = `
+                    mutation {
+                        executeCommand(id: "${window.currentContainerId}", command: "${command.replace(/"/g, '\\"')}") {
+                            output
+                            workingDir
+                        }
+                    }
+                `;
+                fetchGraphQL(mutation).then(result => {
+                    const currentConsole = document.getElementById('consoleContent').textContent;
+                    const commandResult = result.data.executeCommand;
+                    const output = commandResult.output;
+                    const workingDir = commandResult.workingDir;
+                    
+                    // Actualizar el directorio de trabajo que se muestra en el título de la consola
+                    updateWorkingDirDisplay(workingDir);
+                    
+                    // Poner el prompt con el nuevo directorio de trabajo y el comando ejecutado, seguido de la salida del comando
+                    const prompt = workingDir + '$ ';
+                    document.getElementById('consoleContent').textContent = currentConsole + '\n' + prompt + command + '\n' + output;
+                    
+                    document.getElementById('consoleContent').scrollTop = document.getElementById('consoleContent').scrollHeight;
+                    document.getElementById('commandInput').value = '';
+                    document.getElementById('commandInput').focus();
+                }).catch(err => {
+                    showError(err.message || 'Error executing command');
+                });
+            }
+
+            function closeLogs() {
+                document.getElementById('logsModal').style.display = 'none';
             }
 
             async function fetchGraphQL(query, variables = {}) {
@@ -74,6 +180,8 @@
                             <button onclick="startContainer('${container.id}')">Start</button>
                             <button onclick="stopContainer('${container.id}')">Stop</button>
                             <button onclick="deleteContainer('${container.id}')">Delete</button>
+                            <button onclick="openLogs('${container.id}', '${container.name}')">Logs</button>
+                            <button onclick="openConsole('${container.id}', '${container.name}')">Console</button>
                         `;
                         containersDiv.appendChild(div);
                     });
@@ -136,6 +244,13 @@
             }
 
             loadContainers();
+            
+            // Event listener para el enter en el input de comandos
+            document.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' && document.getElementById('commandInput') === document.activeElement) {
+                    executeCommandInContainer();
+                }
+            });
         </script>
     </body>
 

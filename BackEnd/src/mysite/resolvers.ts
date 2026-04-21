@@ -1,6 +1,9 @@
 import { GraphQLError } from "npm:graphql";
 import { ContainerModel } from "./types.ts";
 
+// Map para almacenar el directorio de trabajo actual de cada contenedor y que funcione el comando cd
+const containerWorkingDirs: Map<string, string> = new Map();
+
 async function runDockerCommand(command: string[]): Promise<string> {
     const cmd = new Deno.Command("docker", { args: command });
     const { code, stdout, stderr } = await cmd.output();
@@ -37,6 +40,19 @@ export const resolvers = {
         ): Promise<ContainerModel | null> => {
             const containers = await resolvers.Query.getContainers(_, {});
             return containers.find(c => c.id === args.id) || null;
+        },
+        getContainerLogs: async(
+            _: unknown,
+            args: {id: string},
+        ): Promise<string> => {
+            const logs = await runDockerCommand(["logs", "--tail", "100", args.id]);
+            return logs;
+        },
+        getContainerWorkingDir: async(
+            _: unknown,
+            args: {id: string},
+        ): Promise<string> => {
+            return containerWorkingDirs.get(args.id) || "/";
         }
     },
     Mutation: {
@@ -74,6 +90,40 @@ export const resolvers = {
         ): Promise<boolean> => {
             await runDockerCommand(["stop", args.id]);
             return true;
+        },
+        executeCommand: async(
+            _: unknown,
+            args: {id: string, command: string},
+        ): Promise<{output: string, workingDir: string}> => {
+            const command = args.command.trim();
+            
+            // Caso cuando es cd
+            if (command.startsWith('cd ')) {
+                // Obtener el nuevo directorio a partir del comando borrando el "cd "
+                const newDir = command.substring(3).trim();
+                const currentDir = containerWorkingDirs.get(args.id) || "/";
+                
+                // Execute cd and pwd to get the new directory
+                const cdCommand = `cd "${currentDir}" && cd "${newDir}" && pwd`;
+                const output = await runDockerCommand(["exec", args.id, "/bin/sh", "-c", cdCommand]);
+                const newWorkingDir = output.trim();
+                
+                // Store the new working directory
+                containerWorkingDirs.set(args.id, newWorkingDir);
+                return {
+                    output: `Changed directory to: ${newWorkingDir}`,
+                    workingDir: newWorkingDir
+                };
+            }
+            
+            // Comando normal, se ejecuta en el directorio actual del contenedor
+            const workingDir = containerWorkingDirs.get(args.id) || "/";
+            const fullCommand = `cd "${workingDir}" && ${command}`;
+            const output = await runDockerCommand(["exec", args.id, "/bin/sh", "-c", fullCommand]);
+            return {
+                output: output,
+                workingDir: workingDir
+            };
         }
     }
 };
