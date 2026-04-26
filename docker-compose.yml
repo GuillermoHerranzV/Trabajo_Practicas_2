@@ -1,8 +1,8 @@
 services:
   backend:
-    image: my-backend
+    image: backend-stack
     pull_policy: never
-    container_name: my-backend
+    container_name: backend-stack
     build:
       context: ./BackEnd
       dockerfile: Dockerfile
@@ -14,9 +14,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
   
   frontend:
-    image: my-frontend
+    image: frontend-stack
     pull_policy: never
-    container_name: my-frontend
+    container_name: frontend-stack
     build:
       context: ./FrontEnd
       dockerfile: Dockerfile
