@@ -12,6 +12,7 @@ services:
       - PORT=8000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./Ansible:/ansible
   
   frontend:
     image: frontend-stack

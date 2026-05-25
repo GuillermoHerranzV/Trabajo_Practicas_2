@@ -1,0 +1,28 @@
+/* Ansible/configs/styles.css */
+body {
+    background-color: #1a1a2e;  /* fondo oscuro azulado */
+    color: #eaeaea;
+    font-family: sans-serif;
+    padding: 2rem;
+}
+
+h1 {
+    color: #e94560;  /* título en rojo */
+}
+
+h2 {
+    color: #0f3460;  /* subtítulos en azul oscuro */
+}
+
+button {
+    background-color: #e94560;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #c73652;
+}

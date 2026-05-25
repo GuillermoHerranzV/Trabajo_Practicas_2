@@ -1,0 +1,17 @@
+---
+- name: Configurar frontend-stack
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    - name: Copiar CSS con nuevos colores al frontend
+      command: docker cp /ansible/configs/styles.css frontend-stack:/usr/share/nginx/html/styles.css
+
+    - name: Verificar que el fichero se copió correctamente
+      command: docker exec frontend-stack cat /usr/share/nginx/html/styles.css
+      register: resultado
+
+    - name: Mostrar contenido del CSS aplicado
+      debug:
+        msg: "{{ resultado.stdout }}"

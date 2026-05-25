@@ -1,0 +1,24 @@
+---
+- name: Configurar backend-stack
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    - name: Crear carpeta de logs en el backend
+      command: docker exec backend-stack mkdir -p /app/logs
+
+    - name: Crear subcarpetas dentro de logs
+      command: docker exec backend-stack mkdir -p {{ item }}
+      loop:
+        - /app/logs/info
+        - /app/logs/errors
+        - /app/logs/debug
+
+    - name: Verificar que las carpetas existen
+      command: docker exec backend-stack ls -la /app/logs
+      register: resultado
+
+    - name: Mostrar resultado
+      debug:
+        msg: "{{ resultado.stdout }}"

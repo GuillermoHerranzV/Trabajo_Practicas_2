@@ -9,7 +9,7 @@
     <body>
         <h1>Docker Container Manager</h1>
         <div id="containers">
-            <!-- Containers will be loaded here -->
+            <!-- Cargar contenedores -->
         </div>
         <div id="error" style="color: red; margin-bottom: 1rem;"></div>
         <div id="logsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; overflow: auto;">
@@ -28,6 +28,54 @@
                     <button onclick="executeCommandInContainer()" style="padding: 0.5rem 1rem; background: #0f0; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Execute</button>
                 </div>
                 <button onclick="closeConsoleModal()" style="padding: 0.5rem 1rem; margin-top: 1rem;">Close</button>
+            </div>
+        </div>
+        <!-- Sección de Ansible -->
+        <div id="ansible-section">
+            <h2>Ansible Configuration</h2>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+
+                <div style="border: 1px solid #ccc; padding: 1rem; border-radius: 8px;">
+                    <h3>Backend</h3>
+                    <p>Create logs folder in the backend</p>
+                    <button onclick="runPlaybook('config_backend.yml', 'Backend')">
+                        Configurar Backend
+                    </button>
+                </div>
+
+                <div style="border: 1px solid #ccc; padding: 1rem; border-radius: 8px;">
+                    <h3>Frontend</h3>
+                    <p>Apply new color theme to the frontend</p>
+                    <button onclick="runPlaybook('config_frontend.yml', 'Frontend')">
+                        Configurar Frontend
+                    </button>
+                </div>
+
+                <div style="border: 1px solid #ccc; padding: 1rem; border-radius: 8px;">
+                    <h3>Externo</h3>
+                    <p>Add virtual network interface to the external container</p>
+                    <button onclick="runPlaybook('config_externos.yml', 'Externo')">
+                        Configurar Externo
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Log de salida de Ansible -->
+            <div id="ansible-output" style="
+                background: #000;
+                color: #0f0;
+                padding: 1rem;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 12px;
+                white-space: pre-wrap;
+                max-height: 300px;
+                overflow: auto;
+                margin-top: 1rem;
+                display: none;
+            ">
             </div>
         </div>
         <div id="form">
@@ -241,6 +289,35 @@
                 `;
                 await fetchGraphQL(mutation, { id });
                 loadContainers();
+            }
+
+            async function runPlaybook(playbook, nombre) {
+                const output = document.getElementById('ansible-output');
+                output.style.display = 'block';
+                output.textContent = `Ejecutando playbook ${nombre}...\n`;
+
+                const mutation = `
+                    mutation {
+                        runAnsiblePlaybook(playbook: "${playbook}") {
+                            success
+                            output
+                        }
+                    }
+                `;
+
+                try {
+                    const result = await fetchGraphQL(mutation);
+                    const data = result.data.runAnsiblePlaybook;
+                    output.textContent = data.output || 'Sin salida';
+                    if (!data.success) {
+                        output.style.color = '#f00';  // rojo si hay error
+                    } else {
+                        output.style.color = '#0f0';  // verde si va bien
+                    }
+                } catch (err) {
+                    output.textContent = 'Error: ' + err.message;
+                    output.style.color = '#f00';
+                }
             }
 
             loadContainers();

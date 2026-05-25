@@ -20,10 +20,17 @@ type Mutation {
     startContainer(id: ID!): Boolean!
     stopContainer(id: ID!): Boolean!
     executeCommand(id: ID!, command: String!): CommandResult!
+    runAnsiblePlaybook(playbook: String!): AnsibleResult!
 }
 
 type CommandResult {
     output: String!
     workingDir: String!
 }
+
+type AnsibleResult {
+    success: Boolean!
+    output: String!
+}
+
 `;

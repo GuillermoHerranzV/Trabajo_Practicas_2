@@ -1,0 +1,23 @@
+---
+- name: Configurar contenedor externo
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    - name: Añadir interfaz de red virtual
+      command: docker exec mi-contenedor-externo ip link add eth1 type dummy
+
+    - name: Asignar IP a la interfaz
+      command: docker exec mi-contenedor-externo ip addr add 192.168.99.1/24 dev eth1
+
+    - name: Activar la interfaz
+      command: docker exec mi-contenedor-externo ip link set eth1 up
+
+    - name: Verificar que aparece en ip a
+      command: docker exec mi-contenedor-externo ip a
+      register: resultado
+
+    - name: Mostrar resultado
+      debug:
+        msg: "{{ resultado.stdout }}"

@@ -124,6 +124,44 @@ export const resolvers = {
                 output: output,
                 workingDir: workingDir
             };
+        },
+
+        runAnsiblePlaybook: async(
+            _: unknown,
+            args: {playbook: string},
+        ): Promise<{success: boolean, output: string}> => {
+
+            const allowedPlaybooks = [
+                "config_backend.yml",
+                "config_frontend.yml",
+                "config_externos.yml"
+            ];
+
+            if (!allowedPlaybooks.includes(args.playbook)) {
+                throw new GraphQLError(`Playbook no permitido: ${args.playbook}`);
+            }
+
+            const cmd = new Deno.Command("ansible-playbook", {
+                args: [
+                    "-i", "/ansible/inventory.ini",
+                    `/ansible/playbooks/${args.playbook}`
+                ],
+                env: {
+                    "ANSIBLE_REMOTE_TMP": "/tmp/.ansible/tmp",
+                    "DOCKER_HOST": "unix:///var/run/docker.sock"
+                }
+            });
+
+            const { code, stdout, stderr } = await cmd.output();
+            const stdoutText = new TextDecoder().decode(stdout);
+            const stderrText = new TextDecoder().decode(stderr);
+            const output = [stdoutText, stderrText].filter(t => t.trim()).join('\n');
+
+            return {
+                success: code === 0,
+                output: output || `Proceso terminó con código ${code} sin salida`
+            };
         }
+
     }
 };
