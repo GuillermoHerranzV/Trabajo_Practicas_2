@@ -5,17 +5,20 @@
 
   tasks:
 
+    - name: Instalar iproute2 en el contenedor
+      command: docker exec contenedor-externo apt-get install -y iproute2
+
     - name: Añadir interfaz de red virtual
-      command: docker exec mi-contenedor-externo ip link add eth1 type dummy
+      command: docker exec contenedor-externo ip link add eth1 type dummy
 
     - name: Asignar IP a la interfaz
-      command: docker exec mi-contenedor-externo ip addr add 192.168.99.1/24 dev eth1
+      command: docker exec contenedor-externo ip addr add 192.168.99.1/24 dev eth1
 
     - name: Activar la interfaz
-      command: docker exec mi-contenedor-externo ip link set eth1 up
+      command: docker exec contenedor-externo ip link set eth1 up
 
     - name: Verificar que aparece en ip a
-      command: docker exec mi-contenedor-externo ip a
+      command: docker exec contenedor-externo ip a
       register: resultado
 
     - name: Mostrar resultado

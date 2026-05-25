@@ -60,11 +60,44 @@ export const resolvers = {
             _: unknown,
             args: {name: string, image: string},
         ): Promise<ContainerModel> => {
-            // Pull image first
+            // Pull de la imagen
             await runDockerCommand(["pull", args.image]);
-            // Create container
-            await runDockerCommand(["create", "--name", args.name, args.image]);
-            // Get the created container
+
+            // Imágenes que necesitan un proceso para mantenerse vivas
+            const needsSleepInfinity = [
+                "ubuntu",
+                "debian",
+                "alpine",
+                "centos",
+                "fedora",
+                "archlinux"
+            ];
+            // En este caso los mismos que sleep  infinity pero listas separadas por si hubiese contenedores que necesiten uno y no otro
+            const needsNetAdmin = [
+                "ubuntu",
+                "debian",
+                "alpine",
+                "centos",
+                "fedora",
+                "archlinux"
+            ];
+
+            const imageBase = args.image.split(':')[0].toLowerCase(); // ignora el tag ej: ubuntu:22.04 → ubuntu
+            const extraArgs = needsSleepInfinity.includes(imageBase) ? ["sleep", "infinity"] : [];
+
+            const capArgs = needsNetAdmin.includes(imageBase) ? ["--cap-add=NET_ADMIN"] : [];
+
+            // Crear el contenedor
+            await runDockerCommand(["create", "--name", args.name, ...capArgs, args.image, ...extraArgs]);
+
+            // Si es una imagen base de Linux, hacer apt-get update al arrancar
+            if (needsSleepInfinity.includes(imageBase)) {
+                await runDockerCommand(["start", args.name]);
+                await runDockerCommand(["exec", args.name, "apt-get", "update", "-y"]);
+                await runDockerCommand(["stop", args.name]);
+            }
+
+            // Mostrar el contenedor creado
             const containers = await resolvers.Query.getContainers(_, {});
             const container = containers.find(c => c.name === args.name);
             if (!container) throw new GraphQLError("Failed to create container");
