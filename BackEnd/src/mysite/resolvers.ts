@@ -136,12 +136,12 @@ export const resolvers = {
                 const newDir = command.substring(3).trim();
                 const currentDir = containerWorkingDirs.get(args.id) || "/";
                 
-                // Execute cd and pwd to get the new directory
+                // Ejecutar el comando cd para obtener el nuevo directorio
                 const cdCommand = `cd "${currentDir}" && cd "${newDir}" && pwd`;
                 const output = await runDockerCommand(["exec", args.id, "/bin/sh", "-c", cdCommand]);
                 const newWorkingDir = output.trim();
                 
-                // Store the new working directory
+                // Almacenar el nuevo directorio de trabajo del contenedor
                 containerWorkingDirs.set(args.id, newWorkingDir);
                 return {
                     output: `Changed directory to: ${newWorkingDir}`,
